@@ -19,6 +19,8 @@
 #if !defined(P25Gateway_H)
 #define	P25Gateway_H
 
+#include "P25Network.h"
+#include "Reflectors.h"
 #include "Voice.h"
 #include "Timer.h"
 #include "Conf.h"
@@ -39,6 +41,13 @@
 #include <WS2tcpip.h>
 #endif
 
+class CStaticTG {
+public:
+	unsigned int     m_tg;
+	sockaddr_storage m_addr;
+	unsigned int     m_addrLen;
+};
+
 class CP25Gateway
 {
 public:
@@ -48,10 +57,26 @@ public:
 	int run();
 
 private:
-	CConf   m_conf;
-	CVoice* m_voice;
+	CConf         m_conf;
+	CVoice*       m_voice;
+	CP25Network*  m_remoteNetwork;
+	std::vector<CP25Reflector> m_staticTGs;
+	CP25Reflector m_currentTG;
+	bool          m_currentIsStatic;
+	CTimer        m_hangTimer;
+	unsigned int  m_rfHangTime;
+	CReflectors*  m_reflectors;	
 
 	bool isVoiceBusy() const;
+
+	void writeJSONStatus(const std::string& status);
+	void writeJSONLinking(const std::string& reason, unsigned int tg);
+	void writeJSONUnlinked(const std::string& reason);
+	void writeJSONRelinking(unsigned int tg);
+
+	void writeCommand(const std::string& command);
+
+	static void onCommand(const unsigned char* command, unsigned int length);
 };
 
 #endif

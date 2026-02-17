@@ -15,6 +15,10 @@ x64
 .vs
 P25Gateway/P25Gateway
 P25Parrot/P25Parrot
+<<<<<<< HEAD
+GitVersion.h
+=======
 P25Gateway/GitVersion.h
 P25Parrot/GitVersion.h
+>>>>>>> master
 
