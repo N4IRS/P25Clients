@@ -305,6 +305,7 @@ int CP25Gateway::run()
 			writeJSONLinking("startup", it);
 		} else {
 			LogWarning("Unable to find static reflector %u", it);
+			writeJSONFailed("startup", it);
 		}
 	}
 
@@ -450,6 +451,8 @@ int CP25Gateway::run()
 							m_currentTG       = *refl;
 							m_currentIsStatic = false;
 						} else {
+							LogWarning("Unable to find reflector %u requested by RF activity", dstTG);
+							writeJSONFailed("user", dstTG);
 							m_currentTG.reset();
 							m_currentIsStatic = false;
 						}
@@ -621,6 +624,8 @@ void CP25Gateway::writeCommand(const std::string& command)
 					m_currentTG = *refl;
 					m_currentIsStatic = false;
 				} else {
+					LogWarning("Unable to find reflector %u requested by remote command", tg);
+					writeJSONFailed("remote", tg);
 					m_currentTG.reset();
 					m_currentIsStatic = false;
 				}
@@ -716,6 +721,29 @@ void CP25Gateway::writeJSONRelinking(unsigned int tg)
 
 	json["timestamp"] = CUtils::createTimestamp();
 	json["action"]    = "relinking";
+	json["talkgroup"] = int(tg);
+
+	WriteJSON("link", json, true);
+}
+
+// "failed" was already declared in schema.json's action enum but never
+// actually published. Unlike DMR (password) or YSF (poll timeout),
+// P25Gateway has no connection handshake or keepalive watchdog at all --
+// its actual real-world failure mode is a talkgroup ID that doesn't
+// resolve against the configured reflector list, whether from a
+// mistyped Static= entry in P25Gateway.ini, an operator selecting an
+// unconfigured TG on their radio, or a bad remote-command TG. All three
+// paths previously either logged a bare warning (startup) or did
+// nothing visible at all (RF/remote) and silently reset to no link --
+// this makes that failure a first-class, requested-TG-carrying event
+// like every other gateway's link status.
+void CP25Gateway::writeJSONFailed(const std::string& reason, unsigned int tg)
+{
+	nlohmann::json json;
+
+	json["timestamp"] = CUtils::createTimestamp();
+	json["action"]    = "failed";
+	json["reason"]    = reason;
 	json["talkgroup"] = int(tg);
 
 	WriteJSON("link", json, true);
